@@ -1,0 +1,30 @@
+
+# Archivos de Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Entornos virtuales
+venv/
+env/
+
+# Archivos de configuración personal
+.env
+
+# Archivos de log
+*.log
+
+# VSCode
+.vscode/
+
+# Archivos de bases de datos temporales
+*.sqlite3
+
+# Archivos de prueba o salida
+*.out
+*.bak
+*.tmp
+
+# Jupyter Notebook checkpoints (si usas notebooks)
+.ipynb_checkpoints/

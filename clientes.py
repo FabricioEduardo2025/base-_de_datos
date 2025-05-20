@@ -1,55 +1,139 @@
-import tkinter as tk
-from tkinter import ttk
+from tkinter import *
+from tkinter import ttk, messagebox
+import mysql.connector
 
-class ClientesApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Gestión de Clientes - Domino's Pizza")
+def mostrar_clientes():
+ def conectar_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Edu@rdo15",
+        database="dominos"
+    )
 
-        # Tabla (Treeview)
-        self.tree = ttk.Treeview(root, columns=("ID", "Nombre", "Teléfono", "Correo", "Dirección"), show="headings")
-        self.tree.heading("ID", text="ID Cliente")
-        self.tree.heading("Nombre", text="Nombre")
-        self.tree.heading("Teléfono", text="Teléfono")
-        self.tree.heading("Correo", text="Correo")
-        self.tree.heading("Dirección", text="Dirección")
-        self.tree.pack(pady=10, fill="x")
+ def insertar_cliente(nombre, apellido, telefono, email, direccion, refrescar):
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO clientes (nombre, apellido, telefono, email, direccion)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (nombre.get(), apellido.get(), telefono.get(), email.get(), direccion.get()))
+        conn.commit()
+        conn.close()
+        refrescar()
+        limpiar_cliente(nombre, apellido, telefono, email, direccion)
+        messagebox.showinfo("Éxito", "Cliente insertado correctamente.")
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
 
-        # Formulario
-        frame = tk.Frame(root)
-        frame.pack(pady=10)
+ def eliminar_cliente(tree, refrescar):
+    item = tree.selection()
+    if not item:
+        messagebox.showwarning("Advertencia", "Selecciona un cliente para eliminar.")
+        return
+    id_cliente = tree.item(item)["values"][0]
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM clientes WHERE id_cliente=%s", (id_cliente,))
+        conn.commit()
+        conn.close()
+        refrescar()
+        messagebox.showinfo("Éxito", "Cliente eliminado correctamente.")
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
 
-        tk.Label(frame, text="ID Cliente:").grid(row=0, column=0)
-        self.id_entry = tk.Entry(frame)
-        self.id_entry.grid(row=0, column=1)
+ def actualizar_cliente(tree, nombre, apellido, telefono, email, direccion, refrescar):
+    item = tree.selection()
+    if not item:
+        messagebox.showwarning("Advertencia", "Selecciona un cliente para actualizar.")
+        return
+    id_cliente = tree.item(item)["values"][0]
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE clientes SET nombre=%s, apellido=%s, telefono=%s, email=%s, direccion=%s
+            WHERE id_cliente=%s
+        """, (nombre.get(), apellido.get(), telefono.get(), email.get(), direccion.get(), id_cliente))
+        conn.commit()
+        conn.close()
+        refrescar()
+        limpiar_cliente(nombre, apellido, telefono, email, direccion)
+        messagebox.showinfo("Éxito", "Cliente actualizado correctamente.")
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
 
-        tk.Label(frame, text="Nombre:").grid(row=1, column=0)
-        self.nombre_entry = tk.Entry(frame)
-        self.nombre_entry.grid(row=1, column=1)
+ def limpiar_cliente(nombre, apellido, telefono, email, direccion):
+    for campo in [nombre, apellido, telefono, email, direccion]:
+        campo.delete(0, END)
 
-        tk.Label(frame, text="Teléfono:").grid(row=2, column=0)
-        self.telefono_entry = tk.Entry(frame)
-        self.telefono_entry.grid(row=2, column=1)
+ # --- Interfaz ---
+ ventana = Tk()
+ ventana.title("Gestión de Clientes")
+ ventana.geometry("900x500")
 
-        tk.Label(frame, text="Correo:").grid(row=3, column=0)
-        self.correo_entry = tk.Entry(frame)
-        self.correo_entry.grid(row=3, column=1)
+ frame_izquierda = Frame(ventana)
+ frame_izquierda.pack(side=LEFT, fill=BOTH, expand=True)
 
-        tk.Label(frame, text="Dirección:").grid(row=4, column=0)
-        self.direccion_entry = tk.Entry(frame)
-        self.direccion_entry.grid(row=4, column=1)
+ tree_clientes = ttk.Treeview(frame_izquierda, columns=("ID", "Nombre", "Apellido", "Teléfono", "Email", "Dirección"), show="headings")
+ for col in tree_clientes["columns"]:
+    tree_clientes.heading(col, text=col)
+    tree_clientes.column(col, width=100)
+ tree_clientes.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
-        # Botones DML
-        btn_frame = tk.Frame(root)
-        btn_frame.pack(pady=10)
+ def cargar_clientes():
+    for row in tree_clientes.get_children():
+        tree_clientes.delete(row)
+    conn = conectar_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id_cliente, nombre, apellido, telefono, email, direccion FROM clientes")
+    for row in cursor.fetchall():
+        tree_clientes.insert("", "end", values=row)
+    conn.close()
 
-        tk.Button(btn_frame, text="Insertar", width=10).grid(row=0, column=0, padx=5)
-        tk.Button(btn_frame, text="Actualizar", width=10).grid(row=0, column=1, padx=5)
-        tk.Button(btn_frame, text="Eliminar", width=10).grid(row=0, column=2, padx=5)
-        tk.Button(btn_frame, text="Consultar", width=10).grid(row=0, column=3, padx=5)
+ cargar_clientes()
 
-# Ejecutar interfaz
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ClientesApp(root)
-    root.mainloop()
+ frame_derecha = Frame(ventana, bg="#ffeaa7")
+ frame_derecha.pack(side=RIGHT, fill=Y, padx=10, pady=10)
+
+ etiquetas = ["Nombre", "Apellido", "Teléfono", "Email", "Dirección"]
+ entradas = {}
+ for etiqueta in etiquetas:
+     Label(frame_derecha, text=etiqueta+":", bg="#ffeaa7").pack()
+     entrada = Entry(frame_derecha)
+     entrada.pack(fill="x", pady=2)
+     entradas[etiqueta.lower()] = entrada
+
+ Button(frame_derecha, text="Insertar", command=lambda: insertar_cliente(
+     entradas["nombre"], entradas["apellido"], entradas["teléfono"],
+     entradas["email"], entradas["dirección"], cargar_clientes), bg="#55efc4").pack(pady=5, fill="x")
+
+ Button(frame_derecha, text="Actualizar", command=lambda: actualizar_cliente(
+     tree_clientes, entradas["nombre"], entradas["apellido"], entradas["teléfono"],
+     entradas["email"], entradas["dirección"], cargar_clientes), bg="#74b9ff").pack(pady=5, fill="x")
+
+ Button(frame_derecha, text="Eliminar", command=lambda: eliminar_cliente(tree_clientes, cargar_clientes), bg="#ff7675").pack(pady=5, fill="x")
+
+ def cargar_form_cliente(event):
+    selected = tree_clientes.selection()
+    if selected:
+        datos = tree_clientes.item(selected)["values"]
+        entradas["nombre"].delete(0, END)
+        entradas["nombre"].insert(0, datos[1])
+        entradas["apellido"].delete(0, END)
+        entradas["apellido"].insert(0, datos[2])
+        entradas["teléfono"].delete(0, END)
+        entradas["teléfono"].insert(0, datos[3])
+        entradas["email"].delete(0, END)
+        entradas["email"].insert(0, datos[4])
+        entradas["dirección"].delete(0, END)
+        entradas["dirección"].insert(0, datos[5])
+
+ tree_clientes.bind("<<TreeviewSelect>>", cargar_form_cliente)
+
+ ventana.mainloop()
+
+if __name__== "__main__":
+    mostrar_clientes()

@@ -1,55 +1,136 @@
-import tkinter as tk
-from tkinter import ttk
+from tkinter import *
+from tkinter import ttk, messagebox
+import mysql.connector
 
-class EmpleadosApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Gestión de Empleados - Domino's Pizza")
+def mostrar_empleados():
+    
+    def conectar_db():
+        return mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Edu@rdo15",
+            database="dominos"
+        )
 
-        # Tabla
-        self.tree = ttk.Treeview(root, columns=("ID", "Nombre", "Puesto", "Teléfono", "Turno"), show="headings")
-        self.tree.heading("ID", text="ID Empleado")
-        self.tree.heading("Nombre", text="Nombre")
-        self.tree.heading("Puesto", text="Puesto")
-        self.tree.heading("Teléfono", text="Teléfono")
-        self.tree.heading("Turno", text="Turno")
-        self.tree.pack(pady=10, fill="x")
+    def insertar_empleado(nombre, apellido, telefono, email, direccion, refrescar):
+        try:
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO empleados (nombre, apellido, telefono, email, direccion) VALUES (%s, %s, %s, %s, %s)",
+                           (nombre.get(), apellido.get(), telefono.get(), email.get(), direccion.get()))
+            conn.commit()
+            conn.close()
+            refrescar()
+            limpiar_empleado(nombre, apellido, telefono, email, direccion)
+            messagebox.showinfo("Éxito", "Empleado insertado correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
-        # Formulario
-        frame = tk.Frame(root)
-        frame.pack(pady=10)
+    def eliminar_empleado(tree, refrescar):
+        item = tree.selection()
+        if not item:
+            messagebox.showwarning("Advertencia", "Selecciona un empleado para eliminar.")
+            return
+        id_empleado = tree.item(item)["values"][0]
+        try:
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM empleados WHERE id_empleados=%s", (id_empleado,))
+            conn.commit()
+            conn.close()
+            refrescar()
+            messagebox.showinfo("Éxito", "Empleado eliminado correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
-        tk.Label(frame, text="ID Empleado:").grid(row=0, column=0)
-        self.id_entry = tk.Entry(frame)
-        self.id_entry.grid(row=0, column=1)
+    def actualizar_empleado(tree, nombre, apellido, telefono, email, direccion, refrescar):
+        item = tree.selection()
+        if not item:
+            messagebox.showwarning("Advertencia", "Selecciona un empleado para actualizar.")
+            return
+        try:
+            id_empleado = tree.item(item)["values"][0]
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute("""UPDATE empleados 
+                              SET nombre=%s, apellido=%s, telefono=%s, email=%s, direccion=%s 
+                              WHERE id_empleados=%s""",
+                           (nombre.get(), apellido.get(), telefono.get(), email.get(), direccion.get(), id_empleado))
+            conn.commit()
+            conn.close()
+            refrescar()
+            limpiar_empleado(nombre, apellido, telefono, email, direccion)
+            messagebox.showinfo("Éxito", "Empleado actualizado correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
-        tk.Label(frame, text="Nombre:").grid(row=1, column=0)
-        self.nombre_entry = tk.Entry(frame)
-        self.nombre_entry.grid(row=1, column=1)
+    def limpiar_empleado(nombre, apellido, telefono, email, direccion):
+        for campo in [nombre, apellido, telefono, email, direccion]:
+            campo.delete(0, END)
 
-        tk.Label(frame, text="Puesto:").grid(row=2, column=0)
-        self.puesto_entry = tk.Entry(frame)
-        self.puesto_entry.grid(row=2, column=1)
+    # VENTANA PRINCIPAL
+    nuevo = Tk()
+    nuevo.title("Gestión de Empleados")
+    nuevo.geometry("950x600")
+    nuevo.minsize(800, 500)
 
-        tk.Label(frame, text="Teléfono:").grid(row=3, column=0)
-        self.telefono_entry = tk.Entry(frame)
-        self.telefono_entry.grid(row=3, column=1)
+    nuevo.columnconfigure(0, weight=3)
+    nuevo.columnconfigure(1, weight=1)
+    nuevo.rowconfigure(0, weight=1)
 
-        tk.Label(frame, text="Turno:").grid(row=4, column=0)
-        self.turno_entry = tk.Entry(frame)
-        self.turno_entry.grid(row=4, column=1)
+    izquierda_emp = Frame(nuevo)
+    izquierda_emp.grid(row=0, column=0, sticky="nsew")
 
-        # Botones DML
-        btn_frame = tk.Frame(root)
-        btn_frame.pack(pady=10)
+    tree_emp = ttk.Treeview(izquierda_emp, columns=("ID", "Nombre", "Apellido", "Teléfono", "Email", "Dirección"), show="headings", height=20)
+    for col in tree_emp["columns"]:
+        tree_emp.heading(col, text=col)
+        tree_emp.column(col, width=120, anchor="center")
+    tree_emp.pack(fill="both", expand=True, padx=10, pady=10)
 
-        tk.Button(btn_frame, text="Insertar", width=10).grid(row=0, column=0, padx=5)
-        tk.Button(btn_frame, text="Actualizar", width=10).grid(row=0, column=1, padx=5)
-        tk.Button(btn_frame, text="Eliminar", width=10).grid(row=0, column=2, padx=5)
-        tk.Button(btn_frame, text="Consultar", width=10).grid(row=0, column=3, padx=5)
+    def cargar_empleados():
+        for row in tree_emp.get_children():
+            tree_emp.delete(row)
+        conn = conectar_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id_empleados, nombre, apellido, telefono, email, direccion FROM empleados")
+        for row in cursor.fetchall():
+            tree_emp.insert("", "end", values=row)
+        conn.close()
 
-# Ejecutar interfaz
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = EmpleadosApp(root)
-    root.mainloop()
+    cargar_empleados()
+
+    derecha_emp = Frame(nuevo, bg="#ffeaa7")
+    derecha_emp.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+
+    formulario_emp = Frame(derecha_emp, bg="#ffeaa7")
+    formulario_emp.pack(pady=10, fill="x")  # Se muestra siempre sin opción a ocultar
+
+    etiquetas = ["Nombre", "Apellido", "Teléfono", "Email", "Dirección"]
+    entradas = {}
+    for etiqueta in etiquetas:
+        Label(formulario_emp, text=etiqueta + ":", bg="#ffeaa7").pack()
+        entrada = Entry(formulario_emp)
+        entrada.pack(fill="x")
+        entradas[etiqueta.lower()] = entrada
+
+    Button(derecha_emp, text="Insertar", command=lambda: insertar_empleado(
+        entradas["nombre"], entradas["apellido"], entradas["teléfono"], entradas["email"], entradas["dirección"], cargar_empleados), bg="#81ecec").pack(pady=5, fill="x")
+    Button(derecha_emp, text="Actualizar", command=lambda: actualizar_empleado(
+        tree_emp, entradas["nombre"], entradas["apellido"], entradas["teléfono"], entradas["email"], entradas["dirección"], cargar_empleados), bg="#74b9ff").pack(pady=5, fill="x")
+    Button(derecha_emp, text="Eliminar", command=lambda: eliminar_empleado(tree_emp, cargar_empleados), bg="#ff7675").pack(pady=5, fill="x")
+
+    def cargar_empleado_form(event):
+        selected = tree_emp.selection()
+        if selected:
+            datos = tree_emp.item(selected)["values"]
+            for i, key in enumerate(etiquetas):
+                entradas[key.lower()].delete(0, END)
+                entradas[key.lower()].insert(0, datos[i+1])
+            formulario_emp.pack(pady=10, fill="x")
+
+    tree_emp.bind("<<TreeviewSelect>>", cargar_empleado_form)
+
+    nuevo.mainloop()
+
+if __name__== "__main__":
+    mostrar_empleados()

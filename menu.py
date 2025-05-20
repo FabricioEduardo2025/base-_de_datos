@@ -3,6 +3,7 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import clientes, empleados, productos, proveedores, ingredientes
 
+#20 de mayo
 
 #--- Datos de acceso ---
 usuarios = "eduardo"

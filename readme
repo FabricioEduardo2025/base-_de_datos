@@ -1,0 +1,9 @@
+
+1.	Instalar la base de datos usando los comandos que están contenidos en archivo .sql con nombre dóminos.
+2.	Instalar las librerías que se necesitan para que los archivos .py  se  puedan ejecutar de manera correcta. Librerías usadas: tkinter ,  mysql.connector
+
+
+Creación del entorno virtual:
+1.	python  -m venv23270657(nombre de la carpeta)
+2.	env23270657\scripts\activate
+3.	Crear archivo .gitignore y dentro de esta el nombre del ambiente virtual, env23270657
